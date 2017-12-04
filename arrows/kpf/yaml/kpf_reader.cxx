@@ -216,7 +216,24 @@ kpf_reader_t
   // if not, return false
   //
 
-  auto probe = this->packet_buffer.find( h );
+  packet_buffer_cit probe = this->packet_buffer.end();
+  if (h.domain == packet_header_t::ANY_DOMAIN)
+  {
+    for (packet_buffer_cit any_probe = this->packet_buffer.begin();
+         any_probe != this->packet_buffer.end();
+         ++any_probe )
+    {
+      if (any_probe->first.style == h.style)
+      {
+        probe = any_probe;
+        break;
+      }
+    }
+  }
+  else
+  {
+    probe = this->packet_buffer.find( h );
+  }
   if (probe == this->packet_buffer.end())
   {
     this->reader_status = false;
