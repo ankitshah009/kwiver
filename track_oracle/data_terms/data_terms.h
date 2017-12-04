@@ -104,6 +104,8 @@ namespace events {
   DECL_DT_RW_STRXMLCSV( event_type, int, "event type: currently always in the VIRAT domain" );
   DECL_DT( event_probability, double, "event probability" );
   DECL_DT_RW_STR( source_track_ids, std::vector<unsigned>, "Track IDs contributing to the event" );
+  DECL_DT_RW_STR( actor_track_ids, std::vector<unsigned>, "Track IDs participating in the event" );
+  DECL_DT( kpf_event_label, std::string, "KPF event string" );
 
 } // ...events
 

@@ -45,6 +45,39 @@ bool kwiver_csv_read( const vector<string>& headers,
   return kwiver::track_oracle::kwiver_read( s, d );
 }
 
+void
+vector_unsigned_to_stream( ostream& os, const vector<unsigned>& d )
+{
+  for (size_t i=0, n=d.size(); i<n; ++i)
+  {
+    os << d[i];
+    if ( i != n-1)
+    {
+      os << ":";
+    }
+  }
+}
+
+void
+vector_unsigned_from_str( const string& s, vector<unsigned>& d )
+{
+  string src(s);
+  size_t found = src.find_first_of( ":" );
+  while ( found != string::npos )
+  {
+    src[found] = ' ';
+    found = src.find_first_of( ":", found+1);
+  }
+  istringstream iss( src );
+  d.clear();
+  unsigned tmp;
+  while ((iss >> tmp))
+  {
+    d.push_back( tmp );
+  }
+}
+
+
 } // anon
 
 namespace kwiver {
@@ -341,6 +374,8 @@ namespace events {
   DEF_DT( event_type );
   DEF_DT( event_probability );
   DEF_DT( source_track_ids );
+  DEF_DT( actor_track_ids );
+  DEF_DT( kpf_event_label );
 
 //
 // event type
@@ -478,35 +513,34 @@ bool event_type::read_xml( const TiXmlElement* const_e, int& d ) const
 
 ostream& source_track_ids::to_stream( ostream& os, const vector<unsigned>& d ) const
 {
-  for (size_t i=0, n=d.size(); i<n; ++i)
-  {
-    os << d[i];
-    if ( i != n-1)
-    {
-      os << ":";
-    }
-  }
+  vector_unsigned_to_stream( os, d );
   return os;
 }
 
 bool source_track_ids::from_str( const string& s, vector<unsigned>& d ) const
 {
-  string src(s);
-  size_t found = src.find_first_of( ":" );
-  while ( found != string::npos )
-  {
-    src[found] = ' ';
-    found = src.find_first_of( ":", found+1);
-  }
-  istringstream iss( src );
-  d.clear();
-  unsigned tmp;
-  while ((iss >> tmp))
-  {
-    d.push_back( tmp );
-  }
+  vector_unsigned_from_str( s, d );
   return true;
 }
+
+//
+// actor track IDs
+// same as source_track_ids
+//
+
+
+ostream& actor_track_ids::to_stream( ostream& os, const vector<unsigned>& d ) const
+{
+  vector_unsigned_to_stream( os, d );
+  return os;
+}
+
+bool actor_track_ids::from_str( const string& s, vector<unsigned>& d ) const
+{
+  vector_unsigned_from_str( s, d );
+  return true;
+}
+
 
 } // ...events
 
