@@ -30,49 +30,52 @@
 
 /**
  * @file
- * @brief The track_oracle filter for KPF activities.
- *
- * Like KWE, a KPF activity file:
- *
- * - does not contain any geometry; instead it acts as a "track view" into
- *   the actor tracks. Since we don't yet support track views, we clone
- *   the source tracks.
- *
- * - Does not support the generic read() interface, instead requiring the
- *   source tracks to have been read already
- *
+ * @brief Implementation of KPF activities
  *
  */
 
-#ifndef INCL_TRACK_FILTER_KPF_ACTIVITY_H
-#define INCL_TRACK_FILTER_KPF_ACTIVITY_H
+#include "track_filter_kpf_activity.h"
 
-#include <vital/vital_config.h>
-#include <track_oracle/track_filter_kpf_activity/track_filter_kpf_activity_export.h>
+#include <vital/logger/logger.h>
+static kwiver::vital::logger_handle_t main_logger( kwiver::vital::get_logger( __FILE__ ) );
 
-#include <track_oracle/track_oracle_api_types.h>
-#include <track_oracle/track_base.h>
-#include <track_oracle/track_field.h>
-#include <track_oracle/data_terms/data_terms.h>
+#include <arrows/kpf/yaml/kpf_reader.h>
+#include <arrows/kpf/yaml/kpf_yaml_writer.h>
+#include <arrows/kpf/yaml/kpf_yaml_parser.h>
+#include <arrows/kpf/yaml/kpf_canonical_io_adapter.h>
+
+#include <yaml-cpp/yaml.h>
 
 namespace kwiver {
 namespace track_oracle {
 
-struct TRACK_FILTER_KPF_ACTIVITY_EXPORT track_filter_kpf_activity:
-    public track_base< track_filter_kpf_activity >
+bool
+track_filter_kpf_activity
+::read( const std::string& fn,
+        const track_handle_list_type& ref_tracks,
+        track_handle_list_type& new_tracks,
+        int activity_domain )
 {
+  LOG_INFO( main_logger, "KPF activity YAML load start");
+  KPF::kpf_yaml_parser_t parser( is );
+  KPF::kpf_reader_t reader( parser );
+  LOG_INFO( main_logger, "KPF activity YAML load end");
 
-  track_field< dt::events::event_id > event_id;
-  track_field< dt::events::kpf_event_label > event_label;
-  track_field< dt::events::actor_track_ids > actors;
+  //
+  // process each line
+  //
 
-  static bool read( const std::string& fn,
-                    const track_handle_list_type& ref_tracks,
-                    track_handle_list_type& new_tracks );
-};
+  while ( reader.next() )
+  {
+    namespace KPFC = ::kwiver::vital::kpf::canonical;
 
-} // ...track_oracle
-} // ...kwiver
+    //
+    // Special handling for the act2 field
+    //
 
+    auto activity_probe = reader.transfer_packet_from_buffer(
+      KPF::packet_header_t( KPF::packet_style::ACT, 
 
-#endif
+  }
+
+}
