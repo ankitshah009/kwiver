@@ -48,11 +48,11 @@
 #define INCL_TRACK_FILTER_KPF_ACTIVITY_H
 
 #include <vital/vital_config.h>
-#include <track_oracle/track_filter_kpf_activity/track_filter_kpf_activity_export.h>
+#include <track_oracle/file_formats/track_filter_kpf_activity/track_filter_kpf_activity_export.h>
 
-#include <track_oracle/track_oracle_api_types.h>
-#include <track_oracle/track_base.h>
-#include <track_oracle/track_field.h>
+#include <track_oracle/core/track_oracle_api_types.h>
+#include <track_oracle/core/track_base.h>
+#include <track_oracle/core/track_field.h>
 #include <track_oracle/data_terms/data_terms.h>
 
 namespace kwiver {
@@ -62,12 +62,13 @@ struct TRACK_FILTER_KPF_ACTIVITY_EXPORT track_filter_kpf_activity:
     public track_base< track_filter_kpf_activity >
 {
 
-  track_field< dt::events::event_id > event_id;
-  track_field< dt::events::kpf_event_label > event_label;
-  track_field< dt::events::actor_track_ids > actors;
+  track_field< dt::events::event_id > activity_id;
+  track_field< dt::events::kpf_activity_label > activity_label;
+  track_field< dt::events::actor_track_rows > actors;
 
   static bool read( const std::string& fn,
                     const track_handle_list_type& ref_tracks,
+                    int kpf_activity_domain,
                     track_handle_list_type& new_tracks );
 };
 
