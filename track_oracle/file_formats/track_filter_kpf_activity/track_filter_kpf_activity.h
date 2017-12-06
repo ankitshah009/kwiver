@@ -66,6 +66,13 @@ struct TRACK_FILTER_KPF_ACTIVITY_EXPORT track_filter_kpf_activity:
   track_field< dt::events::kpf_activity_label > activity_label;
   track_field< dt::events::actor_track_rows > actors;
 
+  track_filter_kpf_activity()
+  {
+    Track.add_field( activity_id );
+    Track.add_field( activity_label );
+    Track.add_field( actors );
+  };
+
   static bool read( const std::string& fn,
                     const track_handle_list_type& ref_tracks,
                     int kpf_activity_domain,

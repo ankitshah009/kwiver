@@ -72,8 +72,6 @@ build_lookup_map( const track_handle_list_type& ref_tracks,
                   map< unsigned, track_handle_type >& lookup_map )
 {
   track_field< dt::tracking::external_id > id_field;
-  map< unsigned, track_handle_type > ret;
-
   for (auto i=0; i<ref_tracks.size(); ++i)
   {
     auto probe = id_field.get( ref_tracks[i].row );
@@ -82,7 +80,7 @@ build_lookup_map( const track_handle_list_type& ref_tracks,
       LOG_ERROR( main_logger, "KPF activity reference track without ID1?" );
       return false;
     }
-    auto insert_test = ret.insert( make_pair( probe.second, ref_tracks[i] ));
+    auto insert_test = lookup_map.insert( make_pair( probe.second, ref_tracks[i] ));
     if ( ! insert_test.second )
     {
       LOG_ERROR( main_logger, "KPF activity: duplicate track IDs " << probe.second );
@@ -139,8 +137,8 @@ track_filter_kpf_activity
     }
 
     track_field< dt::tracking::frame_number > fn_field;
-    track_filter_kpf_activity act_schema;
     kpf_actor_track_type actor_track_instance;
+    track_filter_kpf_activity act_schema;
 
     //
     // process each line
@@ -259,9 +257,10 @@ track_filter_kpf_activity
       //
 
       track_handle_type k = act_schema.create();
-      act_schema( k ).activity_id() = kpf_act.activity_id.d;
-      act_schema( k ).activity_label() = kpf_act.activity_name;
-      act_schema( k ).actors() = actor_tracks;
+
+      act_schema.activity_label() = kpf_act.activity_name;
+      act_schema.activity_id() = kpf_act.activity_id.d;
+      act_schema.actors() = actor_tracks;
 
       //
       // set any attributes
