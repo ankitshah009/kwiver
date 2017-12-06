@@ -374,7 +374,7 @@ namespace events {
   DEF_DT( event_type );
   DEF_DT( event_probability );
   DEF_DT( source_track_ids );
-  DEF_DT( actor_track_ids );
+  DEF_DT( actor_track_rows );
   DEF_DT( kpf_activity_label );
 
 //
@@ -524,20 +524,29 @@ bool source_track_ids::from_str( const string& s, vector<unsigned>& d ) const
 }
 
 //
-// actor track IDs
-// same as source_track_ids
+// actor track rows (hmm, not really PORTABLE)
 //
 
 
-ostream& actor_track_ids::to_stream( ostream& os, const vector<unsigned>& d ) const
+ostream& actor_track_rows::to_stream( ostream& os, const track_handle_list_type& d ) const
 {
-  vector_unsigned_to_stream( os, d );
+  vector<unsigned> tmp;
+  for (auto i: d)
+  {
+    tmp.push_back( i.row );
+  }
+  vector_unsigned_to_stream( os, tmp );
   return os;
 }
 
-bool actor_track_ids::from_str( const string& s, vector<unsigned>& d ) const
+bool actor_track_rows::from_str( const string& s, track_handle_list_type& d ) const
 {
-  vector_unsigned_from_str( s, d );
+  vector<unsigned> tmp;
+  vector_unsigned_from_str( s, tmp );
+  for (auto i: tmp)
+  {
+    d.push_back( track_handle_type( i ));
+  }
   return true;
 }
 
