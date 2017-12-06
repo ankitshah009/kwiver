@@ -62,6 +62,7 @@ add_subdirectory( track_vatic )
 add_subdirectory( track_vpd )
 if( KWIVER_ENABLE_KPF )
   add_subdirectory( track_kpf_geom )
+  add_subdirectory( kpf_utils )
   # ...kpf_activity
   set( TRACK_KPF_LIBRARIES track_kpf_geom )
 else()
