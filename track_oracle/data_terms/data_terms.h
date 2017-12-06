@@ -105,7 +105,7 @@ namespace events {
   DECL_DT( event_probability, double, "event probability" );
   DECL_DT_RW_STR( source_track_ids, std::vector<unsigned>, "Track IDs contributing to the event" );
   DECL_DT_RW_STR( actor_track_ids, std::vector<unsigned>, "Track IDs participating in the event" );
-  DECL_DT( kpf_event_label, std::string, "KPF event string" );
+  DECL_DT( kpf_activity_label, std::string, "KPF activity string" );
 
 } // ...events
 

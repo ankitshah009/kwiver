@@ -375,7 +375,7 @@ namespace events {
   DEF_DT( event_probability );
   DEF_DT( source_track_ids );
   DEF_DT( actor_track_ids );
-  DEF_DT( kpf_event_label );
+  DEF_DT( kpf_activity_label );
 
 //
 // event type
