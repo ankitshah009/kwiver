@@ -57,7 +57,8 @@
 #include <track_oracle/core/track_field.h>
 #include <track_oracle/data_terms/data_terms.h>
 
-#include <regex>
+#include <kwiversys/RegularExpression.hxx>
+
 #include <sstream>
 
 using std::map;
@@ -76,8 +77,8 @@ kpf_utils::get_optional_fields()
   string dbltype( typeid( double(0) ).name()), strtype( typeid( string("") ).name());
   string kpf_key_str( KPF::style2str( KPF::packet_style::KV ));
   // Note that these regexs are tied to the synthesized field names in the reader.
-  std::regex field_dbl("^([a-zA-Z0-9]+)_([0-9]+)$"), field_kv("^"+kpf_key_str+"_([a-zA-Z0-9]+)$");
-  auto match_end = std::sregex_iterator();
+  kwiversys::RegularExpression field_dbl("^([a-zA-Z0-9]+)_([0-9]+)$");
+  kwiversys::RegularExpression field_kv("^"+kpf_key_str+"_([a-zA-Z0-9]+)$");
 
   for (auto i: track_oracle_core::get_all_field_handles())
   {
@@ -86,16 +87,14 @@ kpf_utils::get_optional_fields()
     // Is the type double?
     if (e.typeid_str == dbltype)
     {
-      auto m = std::sregex_iterator( e.name.begin(), e.name.end(), field_dbl );
       // did we find two matches and is the first a KPF style?
-      if (std::distance( m, match_end ) == 2)
+      if (field_dbl.find( e.name ))
       {
-        auto style = KPF::str2style( m->str() );
+        auto style = KPF::str2style( field_dbl.match(1) );
         if (style != KPF::packet_style::INVALID )
         {
           // Convert the domain and associate a packet with the field
-          ++m;
-          optional_fields[i] = KPF::packet_t( KPF::packet_header_t( style, stoi( m->str() )));
+          optional_fields[i] = KPF::packet_t( KPF::packet_header_t( style, stoi( field_dbl.match(2) )));
 
         } // ...not a valid KPF domain
       } // ... didn't find two matches
@@ -104,13 +103,11 @@ kpf_utils::get_optional_fields()
     // Is the type string?
     else if (e.typeid_str == strtype)
     {
-      auto m = std::sregex_iterator( e.name.begin(), e.name.end(), field_kv );
-      // did we find one match?
-      if (std::distance( m, match_end) == 1)
+      if (field_kv.find( e.name ))
       {
         // Create a partial KV packet with the key
         KPF::packet_t p( (KPF::packet_header_t( KPF::packet_style::KV )) );
-        p.kv.key = m->str();
+        p.kv.key = field_kv.match(1);
         optional_fields[i] = p;
 
       } // ...didn't get exactly one match
