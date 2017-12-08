@@ -260,6 +260,7 @@ track_filter_kpf_activity
 
       act_schema.activity_label() = kpf_act.activity_name;
       act_schema.activity_id() = kpf_act.activity_id.d;
+      act_schema.activity_domain() = kpf_activity_domain;
       act_schema.actors() = actor_tracks;
 
       //

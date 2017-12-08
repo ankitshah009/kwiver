@@ -106,6 +106,7 @@ namespace events {
   DECL_DT_RW_STR( source_track_ids, std::vector<unsigned>, "Track IDs contributing to the event" );
   DECL_DT_RW_STR( actor_track_rows, track_handle_list_type, "Track handles participating in the event" );
   DECL_DT( kpf_activity_label, std::string, "KPF activity string" );
+  DECL_DT( kpf_activity_domain, int, "KPF activity domain" );
 
 } // ...events
 

@@ -376,6 +376,7 @@ namespace events {
   DEF_DT( source_track_ids );
   DEF_DT( actor_track_rows );
   DEF_DT( kpf_activity_label );
+  DEF_DT( kpf_activity_domain );
 
 //
 // event type
