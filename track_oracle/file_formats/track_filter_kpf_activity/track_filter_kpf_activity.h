@@ -64,8 +64,10 @@ struct TRACK_FILTER_KPF_ACTIVITY_EXPORT track_filter_kpf_activity:
 
   track_field< dt::events::event_id > activity_id;
   track_field< dt::events::kpf_activity_label > activity_label;
-  track_field< dt::events::actor_track_rows > actors;
   track_field< dt::events::kpf_activity_domain > activity_domain;
+  track_field< dt::events::actor_track_rows > actors;
+  track_field< dt::tracking::frame_number > activity_start;
+  track_field< dt::tracking::frame_number > activity_stop;
 
   track_filter_kpf_activity()
   {
@@ -73,12 +75,17 @@ struct TRACK_FILTER_KPF_ACTIVITY_EXPORT track_filter_kpf_activity:
     Track.add_field( activity_label );
     Track.add_field( activity_domain );
     Track.add_field( actors );
+    Track.add_field( activity_start );
+    Track.add_field( activity_stop );
   };
 
   static bool read( const std::string& fn,
                     const track_handle_list_type& ref_tracks,
                     int kpf_activity_domain,
                     track_handle_list_type& new_tracks );
+
+  static bool write( const std::string& fn,
+                     const track_handle_list_type& tracks );
 };
 
 } // ...track_oracle

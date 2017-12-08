@@ -65,6 +65,7 @@ static kwiver::vital::logger_handle_t main_logger( kwiver::vital::get_logger( __
 #include <sstream>
 
 using std::map;
+using std::vector;
 using std::string;
 using std::ostream;
 using std::ostringstream;
@@ -279,11 +280,11 @@ kpf_utils::add_to_row( kwiver::logging_map_type& log_map,
   };
 }
 
-void
-kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
-                                  KPF::record_yaml_writer& w,
-                                  const oracle_entry_handle_type& row )
+vector< KPF::packet_t >
+kpf_utils::optional_fields_to_packets( kpf_utils::optional_field_state& ofs,
+                                       const oracle_entry_handle_type& row )
 {
+  vector< KPF::packet_t > ret;
   //
   // log what we're doing the first time through
   //
@@ -306,7 +307,7 @@ kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
   }
 
   //
-  // loop through all the fields defined on the row, write out the ones
+  // loop through all the fields defined on the row, convert the ones
   // we know how to handle
   //
 
@@ -322,7 +323,7 @@ kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
     // hmm, awkward
     //
 
-    const KPF::packet_t& p = probe->second;
+    KPF::packet_t p = probe->second;
     bool lost_value_flag = true;
     switch (p.header.style)
     {
@@ -331,7 +332,7 @@ kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
         auto v = track_oracle_core::get<double>( row, fh );
         if ( v.first )
         {
-          w << KPF::writer< KPFC::conf_t >( v.second, p.header.domain );
+          p.conf.d = v.second;
           lost_value_flag = false;
         }
       }
@@ -341,7 +342,7 @@ kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
         auto v = track_oracle_core::get<double>( row, fh );
         if ( v.first )
         {
-          w << KPF::writer< KPFC::eval_t >( v.second, p.header.domain );
+          p.eval.d = v.second;
           lost_value_flag = false;
         }
       }
@@ -351,7 +352,7 @@ kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
         auto v = track_oracle_core::get<string>( row, fh );
         if ( v.first )
         {
-          w << KPF::writer< KPFC::kv_t >( p.kv.key, v.second );
+          p.kv.val = v.second;
           lost_value_flag = false;
         }
       }
@@ -368,8 +369,41 @@ kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
     {
       LOG_ERROR( main_logger, "Lost value for " << p.header << "?" );
     }
+    else
+    {
+      ret.push_back( p );
+    }
   } // ...for all optional fields
 
+  return ret;
+}
+
+void
+kpf_utils::write_optional_packets( const vector< KPF::packet_t>& packets,
+                                   kwiver::logging_map_type& log_map,
+                                   KPF::record_yaml_writer& w )
+{
+  for (const auto& p: packets )
+  {
+    switch (p.header.style)
+    {
+    case KPF::packet_style::CONF:
+      w << KPF::writer< KPFC::conf_t >( p.conf.d, p.header.domain );
+      break;
+    case KPF::packet_style::EVAL:
+      w << KPF::writer< KPFC::eval_t >( p.eval.d, p.header.domain );
+      break;
+    case KPF::packet_style::KV:
+      w << KPF::writer< KPFC::kv_t >( p.kv.key, p.kv.val );
+      break;
+    default:
+      {
+        ostringstream oss;
+        oss << "No handler for optional packet " << p.header;
+        log_map.add_msg( oss.str() );
+      }
+    }
+  } // ...for all optional fields
 }
 
 } // ...track_oracle

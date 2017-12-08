@@ -77,10 +77,16 @@ struct KPF_UTILS_EXPORT optional_field_state
 };
 
 KPF_UTILS_EXPORT
+std::vector< KPF::packet_t >
+optional_fields_to_packets( optional_field_state& ofs,
+                            const oracle_entry_handle_type& row );
+
+
+KPF_UTILS_EXPORT
 void
-write_optional_fields( optional_field_state& ofs,
-                       KPF::record_yaml_writer& w,
-                       const oracle_entry_handle_type& row );
+write_optional_packets( const std::vector< KPF::packet_t>& packets,
+                        kwiver::logging_map_type& log_map,
+                        KPF::record_yaml_writer& w );
 
 } // ...kpf_utils
 } // ...track_oracle

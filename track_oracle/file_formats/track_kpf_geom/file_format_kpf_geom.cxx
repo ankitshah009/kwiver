@@ -66,6 +66,7 @@ using std::ofstream;
 using std::stringstream;
 using std::ostringstream;
 using std::map;
+using std::vector;
 using std::stoi;
 
 namespace KPF=::kwiver::vital::kpf;
@@ -348,7 +349,9 @@ file_format_kpf_geom
       // write out the optional fields
       //
 
-      kpf_utils::write_optional_fields( ofs, w, f.row );
+      vector< KPF::packet_t > opt_packets =
+        kpf_utils::optional_fields_to_packets( ofs, f.row );
+      kpf_utils::write_optional_packets( opt_packets, wmsgs, w );
 
       w << KPF::record_yaml_writer::endl;
 

@@ -43,6 +43,7 @@ static kwiver::vital::logger_handle_t main_logger( kwiver::vital::get_logger( __
 #include <arrows/kpf/yaml/kpf_yaml_writer.h>
 #include <arrows/kpf/yaml/kpf_yaml_parser.h>
 #include <arrows/kpf/yaml/kpf_canonical_io_adapter.h>
+#include <arrows/kpf/yaml/kpf_canonical_types.h>
 
 #include <track_oracle/utils/logging_map.h>
 #include <track_oracle/file_formats/kpf_utils/kpf_utils.h>
@@ -57,6 +58,7 @@ using std::map;
 using std::make_pair;
 using std::string;
 using std::ifstream;
+using std::ofstream;
 using std::ostringstream;
 using std::vector;
 
@@ -100,7 +102,6 @@ struct kpf_act_exception
   explicit kpf_act_exception( const string& msg ): what(msg) {}
   string what;
 };
-
 
 } // anon namespace
 
@@ -263,6 +264,27 @@ track_filter_kpf_activity
       act_schema.activity_domain() = kpf_activity_domain;
       act_schema.actors() = actor_tracks;
 
+      // only set the ts0 start/stop time
+
+      KPFC::activity_t::scoped_tsr_t activity_tsr;
+      activity_tsr.domain = -1;
+      for (const auto& tsr: kpf_act.timespan)
+      {
+        if (tsr.domain == KPFC::timestamp_t::FRAME_NUMBER)
+        {
+          activity_tsr = tsr;
+        }
+      }
+      if ( activity_tsr.domain == -1 )
+      {
+        ostringstream oss;
+        oss << "Activity timestamp range has no TS0 packets; skipping: " << activity_probe.second;
+        wmsgs.add_msg( oss.str() );
+        continue;
+      }
+      act_schema.activity_start() = activity_tsr.tsr.start;
+      act_schema.activity_stop() = activity_tsr.tsr.stop;
+
       //
       // set any attributes
       //
@@ -307,6 +329,143 @@ track_filter_kpf_activity
   return all_okay;
 
 }
+
+bool
+track_filter_kpf_activity
+::write( const std::string& fn,
+         const track_handle_list_type& tracks )
+{
+  logging_map_type wmsgs( main_logger, KWIVER_LOGGER_SITE );
+  bool all_okay = true;
+  kpf_utils::optional_field_state ofs( wmsgs );
+
+  track_field< dt::tracking::external_id > track_id_field;
+  track_field< dt::tracking::frame_number > frame_number_field;
+
+  try
+  {
+    namespace KPFC = ::kwiver::vital::kpf::canonical;
+
+    ofstream os( fn.c_str() );
+    if ( ! os )
+    {
+      throw kpf_act_exception( "Couldn't write KPF activity file '"+fn+"'");
+    }
+
+    KPF::record_yaml_writer w( os );
+    track_filter_kpf_activity k;
+
+    for (const auto& t: tracks )
+    {
+      // gather the fields
+
+      auto id_p = k.activity_id.get( t.row );
+      auto label_p = k.activity_label.get( t.row );
+      auto actor_p = k.actors.get( t.row );
+      auto domain_p = k.activity_domain.get( t.row );
+      auto ts_start_p = k.activity_start.get( t.row );
+      auto ts_stop_p = k.activity_stop.get( t.row );
+
+      size_t pre_check_size = wmsgs.n_msgs();
+      if ( ! id_p.first )       wmsgs.add_msg( "No activity id" );
+      if ( ! label_p.first )    wmsgs.add_msg( "No activity label" );
+      if ( ! actor_p.first )    wmsgs.add_msg( "No actors" );
+      if ( ! domain_p.first )   wmsgs.add_msg( "No domain" );
+      if ( ! ts_start_p.first ) wmsgs.add_msg( "No activity start frame" );
+      if ( ! ts_stop_p.first )  wmsgs.add_msg( "No activity stop frame" );
+      if ( wmsgs.n_msgs() != pre_check_size )
+      {
+        continue;
+      }
+
+      // copy in the top-level data
+      KPFC::activity_t a;
+      a.activity_name = label_p.second;
+      a.activity_id.d = id_p.second;
+      a.activity_id_domain = domain_p.second;
+
+      KPFC::activity_t::scoped_tsr_t act_ts;
+      act_ts.domain = KPFC::timestamp_t::FRAME_NUMBER;
+      act_ts.tsr.start = ts_start_p.second;
+      act_ts.tsr.stop = ts_stop_p.second;
+      a.timespan.push_back( act_ts );
+
+      // copy in the actor info
+      for (const auto& actor: actor_p.second )
+      {
+        auto actor_id_p = track_id_field.get( actor.row );
+        auto frames = track_oracle_core::get_frames( actor );
+        auto actor_ts_start_p = frame_number_field.get( frames.front().row );
+        auto actor_ts_stop_p = frame_number_field.get( frames.back().row );
+
+        size_t actor_pre_check_size = wmsgs.n_msgs();
+        if ( ! actor_id_p.first )      wmsgs.add_msg( "No actor ID" );
+        if ( ! actor_ts_start_p.first) wmsgs.add_msg( "No actor start frame" );
+        if ( ! actor_ts_stop_p.first)  wmsgs.add_msg( "No actor stop frame" );
+        if ( wmsgs.n_msgs() != actor_pre_check_size)
+        {
+          continue;
+        }
+        KPFC::activity_t::actor_t kpf_actor;
+        kpf_actor.id_domain = KPFC::id_t::TRACK_ID;
+        kpf_actor.id.d = actor_id_p.second;
+        KPFC::activity_t::scoped_tsr_t actor_ts;
+        actor_ts.tsr.start = actor_ts_start_p.second;
+        actor_ts.tsr.stop = actor_ts_stop_p.second;
+        actor_ts.domain = KPFC::timestamp_t::FRAME_NUMBER;
+        kpf_actor.actor_timespan.push_back( actor_ts );
+
+        a.actors.push_back( kpf_actor );
+      } // ...for each actor
+
+      // get the optional packets
+      vector< KPF::packet_t > opt_packets =
+        kpf_utils::optional_fields_to_packets( ofs, t.row );
+      vector< KPF::packet_t > non_activity_opt_packets;
+      // move the KV packets into the activity
+      for (const auto& p: opt_packets)
+      {
+        if (p.header.style == KPF::packet_style::KV)
+        {
+          a.attributes.push_back( p.kv );
+        }
+        else
+        {
+          non_activity_opt_packets.push_back ( p );
+        }
+      }
+
+      //
+      // All set-- write 'em out
+      //
+
+      w << KPF::writer< KPFC::activity_t >( a, domain_p.second );
+      kpf_utils::write_optional_packets( non_activity_opt_packets, wmsgs, w );
+      w << KPF::record_yaml_writer::endl;
+
+    } // ...for each track
+  } // ... try
+
+  catch (const kpf_act_exception& e )
+  {
+    LOG_ERROR( main_logger, "Error wriite KPF activity file '" << fn << "': " << e.what );
+    all_okay = false;
+  }
+
+  //
+  // anything to report?
+  //
+
+  if (! wmsgs.empty() )
+  {
+    LOG_INFO( main_logger, "KPF act writer: warnings begin" );
+    wmsgs.dump_msgs();
+    LOG_INFO( main_logger, "KPF act writer: warnings end" );
+  }
+
+  return all_okay;
+}
+
 
 } // ...track_oracle
 } // ...kwiver
