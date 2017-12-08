@@ -324,23 +324,11 @@ file_format_kpf_geom
   track_kpf_geom_type entry;
   vgl_box_adapter_t box_adapter;
 
-  auto optional_fields = kpf_utils::get_optional_fields();
-  for (auto i: optional_fields)
-  {
-    const KPF::packet_t& p = i.second;
-    if (p.header.style == KPF::packet_style::KV)
-    {
-      LOG_INFO( main_logger, "KPF geom writer: adding optional KV " << p.kv.key );
-    }
-    else
-    {
-      LOG_INFO( main_logger, "KPF geom writer: adding optional " << p.header );
-    }
-  }
-
   //
   // worry about meta packets later
   //
+
+  kpf_utils::optional_field_state ofs( wmsgs );
 
   for (const auto& t: tracks )
   {
@@ -360,68 +348,7 @@ file_format_kpf_geom
       // write out the optional fields
       //
 
-      for (auto fh: track_oracle_core::fields_at_row( f.row ) )
-      {
-        auto probe = optional_fields.find( fh );
-        if (probe == optional_fields.end())
-        {
-          continue;
-        }
-
-        //
-        // hmm, awkward
-        //
-
-        const KPF::packet_t& p = probe->second;
-        switch (p.header.style)
-        {
-        case KPF::packet_style::CONF:
-          {
-            auto v = track_oracle_core::get<double>( f.row, fh );
-            if ( v.first )
-            {
-              w << KPF::writer< KPFC::conf_t >( v.second, p.header.domain );
-            }
-            else
-            {
-              LOG_ERROR( main_logger, "Lost value for " << p.header << "?" );
-            }
-          }
-          break;
-        case KPF::packet_style::EVAL:
-          {
-            auto v = track_oracle_core::get<double>( f.row, fh );
-            if ( v.first )
-            {
-              w << KPF::writer< KPFC::eval_t >( v.second, p.header.domain );
-            }
-            else
-            {
-              LOG_ERROR( main_logger, "Lost value for " << p.header << "?" );
-            }
-          }
-          break;
-        case KPF::packet_style::KV:
-          {
-            auto v = track_oracle_core::get<string>( f.row, fh );
-            if ( v.first )
-            {
-              w << KPF::writer< KPFC::kv_t >( p.kv.key, v.second );
-            }
-            else
-            {
-              LOG_ERROR( main_logger, "Lost value for " << p.header << "?" );
-            }
-          }
-          break;
-        default:
-          {
-            ostringstream oss;
-            oss << "No handler for optional packet " << p.header;
-            wmsgs.add_msg( oss.str() );
-          }
-        }
-      } // ...for all optional fields
+      kpf_utils::write_optional_fields( ofs, w, f.row );
 
       w << KPF::record_yaml_writer::endl;
 

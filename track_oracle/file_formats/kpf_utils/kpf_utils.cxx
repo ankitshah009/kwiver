@@ -53,6 +53,9 @@
 
 #include "kpf_utils.h"
 
+#include <vital/logger/logger.h>
+static kwiver::vital::logger_handle_t main_logger( kwiver::vital::get_logger( __FILE__ ) );
+
 #include <track_oracle/core/track_oracle_core.h>
 #include <track_oracle/core/track_field.h>
 #include <track_oracle/data_terms/data_terms.h>
@@ -63,15 +66,18 @@
 
 using std::map;
 using std::string;
+using std::ostream;
 using std::ostringstream;
 
 namespace KPF=::kwiver::vital::kpf;
 
-namespace kwiver {
-namespace track_oracle {
+namespace // anon
+{
+
+using namespace kwiver::track_oracle;
 
 map< field_handle_type, KPF::packet_t >
-kpf_utils::get_optional_fields()
+get_optional_fields()
 {
   map< field_handle_type, KPF::packet_t > optional_fields;
   string dbltype( typeid( double(0) ).name()), strtype( typeid( string("") ).name());
@@ -117,13 +123,27 @@ kpf_utils::get_optional_fields()
   return optional_fields;
 }
 
+} // anon
+
+namespace kwiver {
+namespace track_oracle {
+
+namespace KPFC = ::kwiver::vital::kpf::canonical;
+
+kpf_utils::optional_field_state
+::optional_field_state( kwiver::logging_map_type& lmt )
+  : first_pass( true ),
+    optional_fields( get_optional_fields() ),
+    log_map( lmt )
+{
+}
+
+
 void
 kpf_utils::add_to_row( kwiver::logging_map_type& log_map,
                        const oracle_entry_handle_type& row,
                        const KPF::packet_t& p )
 {
-  namespace KPFC = ::kwiver::vital::kpf::canonical;
-
   //
   // Step through the packet types and add them
   //
@@ -257,6 +277,99 @@ kpf_utils::add_to_row( kwiver::logging_map_type& log_map,
       log_map.add_msg( oss.str() );
     }
   };
+}
+
+void
+kpf_utils::write_optional_fields( kpf_utils::optional_field_state& ofs,
+                                  KPF::record_yaml_writer& w,
+                                  const oracle_entry_handle_type& row )
+{
+  //
+  // log what we're doing the first time through
+  //
+
+  if ( ofs.first_pass )
+  {
+    ofs.first_pass = false;
+    for (auto i: ofs.optional_fields)
+    {
+      const KPF::packet_t& p = i.second;
+      if (p.header.style == KPF::packet_style::KV)
+      {
+        LOG_INFO( main_logger, "KPF writer: adding optional KV " << p.kv.key );
+      }
+      else
+      {
+        LOG_INFO( main_logger, "KPF writer: adding optional " << p.header );
+      }
+    }
+  }
+
+  //
+  // loop through all the fields defined on the row, write out the ones
+  // we know how to handle
+  //
+
+  for (auto fh: track_oracle_core::fields_at_row( row ) )
+  {
+    auto probe = ofs.optional_fields.find( fh );
+    if (probe == ofs.optional_fields.end())
+    {
+      continue;
+    }
+
+    //
+    // hmm, awkward
+    //
+
+    const KPF::packet_t& p = probe->second;
+    bool lost_value_flag = true;
+    switch (p.header.style)
+    {
+    case KPF::packet_style::CONF:
+      {
+        auto v = track_oracle_core::get<double>( row, fh );
+        if ( v.first )
+        {
+          w << KPF::writer< KPFC::conf_t >( v.second, p.header.domain );
+          lost_value_flag = false;
+        }
+      }
+      break;
+    case KPF::packet_style::EVAL:
+      {
+        auto v = track_oracle_core::get<double>( row, fh );
+        if ( v.first )
+        {
+          w << KPF::writer< KPFC::eval_t >( v.second, p.header.domain );
+          lost_value_flag = false;
+        }
+      }
+      break;
+    case KPF::packet_style::KV:
+      {
+        auto v = track_oracle_core::get<string>( row, fh );
+        if ( v.first )
+        {
+          w << KPF::writer< KPFC::kv_t >( p.kv.key, v.second );
+          lost_value_flag = false;
+        }
+      }
+      break;
+    default:
+      {
+        lost_value_flag = false;
+        ostringstream oss;
+        oss << "No handler for optional packet " << p.header;
+        ofs.log_map.add_msg( oss.str() );
+      }
+    }
+    if (lost_value_flag)
+    {
+      LOG_ERROR( main_logger, "Lost value for " << p.header << "?" );
+    }
+  } // ...for all optional fields
+
 }
 
 } // ...track_oracle

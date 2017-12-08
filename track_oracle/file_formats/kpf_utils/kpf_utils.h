@@ -51,6 +51,7 @@
 #include <track_oracle/utils/logging_map.h>
 
 #include <arrows/kpf/yaml/kpf_packet.h>
+#include <arrows/kpf/yaml/kpf_yaml_writer.h>
 
 #include <map>
 
@@ -61,14 +62,25 @@ namespace kpf_utils {
 namespace KPF=::kwiver::vital::kpf;
 
 KPF_UTILS_EXPORT
-std::map< field_handle_type, KPF::packet_t >
-get_optional_fields();
-
-KPF_UTILS_EXPORT
 void
 add_to_row( kwiver::logging_map_type& log_map,
             const oracle_entry_handle_type& row,
             const KPF::packet_t& p );
+
+struct KPF_UTILS_EXPORT optional_field_state
+{
+  bool first_pass;
+  std::map< field_handle_type, KPF::packet_t > optional_fields;
+  kwiver::logging_map_type& log_map;
+
+  explicit optional_field_state( kwiver::logging_map_type& lmt );
+};
+
+KPF_UTILS_EXPORT
+void
+write_optional_fields( optional_field_state& ofs,
+                       KPF::record_yaml_writer& w,
+                       const oracle_entry_handle_type& row );
 
 } // ...kpf_utils
 } // ...track_oracle
