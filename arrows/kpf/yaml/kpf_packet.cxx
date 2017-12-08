@@ -164,6 +164,7 @@ packet_t
   case packet_style::ID:      this->id = other.id; break;
   case packet_style::TS:      this->timestamp = other.timestamp; break;
   case packet_style::CONF:    this->conf = other.conf; break;
+  case packet_style::EVAL:    this->eval = other.eval; break;
 
     // placement new for non-trivial types
   case packet_style::TSR:
@@ -215,6 +216,8 @@ operator<<( std::ostream& os, const packet_t& p )
   case packet_style::KV:    os << p.kv.key << " = " << p.kv.val; break;
   case packet_style::POLY:  os << "(polygon w/ " << p.poly.xy.size() << " points)"; break;
   case packet_style::META:  os << "meta: " << p.meta.txt; break;
+  case packet_style::CONF:  os << "conf: " << p.conf.d; break;
+  case packet_style::EVAL:  os << "eval: " << p.eval.d; break;
 
   case packet_style::ACT:
     {

@@ -214,6 +214,9 @@ parse_scalar( size_t index,
       case packet_style::CONF:
         packet.conf.d = stod( tokens[index] );
         break;
+      case packet_style::EVAL:
+        packet.eval.d = stod( tokens[index] );
+        break;
       default:
         LOG_ERROR( main_logger, "Unhandled scalar parse style " << static_cast<int>( style ) );
         return make_pair( false, index );
@@ -578,6 +581,7 @@ packet_payload_parser ( size_t index,
   case packet_style::ID:   // fallthrough
   case packet_style::TS:   // fallthrough
   case packet_style::CONF: // fallthrough
+  case packet_style::EVAL: // fallthrough
     ret = parse_scalar( index, tokens, packet.header.style, packet );
     break;
 

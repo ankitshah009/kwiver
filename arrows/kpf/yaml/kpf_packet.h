@@ -125,6 +125,7 @@ struct KPF_YAML_EXPORT packet_t
     canonical::conf_t conf;
     canonical::poly_t poly;
     canonical::meta_t meta;
+    canonical::eval_t eval;
     canonical::activity_t activity;
   };
   packet_t(): header( packet_header_t() ) {}
