@@ -66,8 +66,8 @@ struct TRACK_FILTER_KPF_ACTIVITY_EXPORT track_filter_kpf_activity:
   track_field< dt::events::kpf_activity_label > activity_label;
   track_field< dt::events::kpf_activity_domain > activity_domain;
   track_field< dt::events::actor_track_rows > actors;
-  track_field< dt::tracking::frame_number > activity_start;
-  track_field< dt::tracking::frame_number > activity_stop;
+  track_field< dt::events::kpf_activity_start > activity_start;
+  track_field< dt::events::kpf_activity_stop > activity_stop;
 
   track_filter_kpf_activity()
   {
