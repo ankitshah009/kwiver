@@ -44,6 +44,7 @@ static kwiver::vital::logger_handle_t main_logger( kwiver::vital::get_logger( __
 
 #include <track_oracle/core/track_oracle_core.h>
 #include <track_oracle/file_formats/file_format_manager.h>
+#include <track_oracle/file_formats/file_format_base.h>
 #include <track_oracle/file_formats/track_filter_kpf_activity/track_filter_kpf_activity.h>
 
 using std::string;
@@ -85,4 +86,16 @@ int main( int argc, char *argv[] )
   }
 
   LOG_INFO( main_logger, "Generated " << activity_tracks.size() << " activity tracks" );
+
+  {
+    string geom_out_fn = output_prefix_arg()+".geom.yml";
+    bool okay = file_format_manager::get_format( TF_KPF_GEOM )->write( geom_out_fn, input_geom_tracks );
+    LOG_INFO( main_logger, "Wrote KPF geometry to " << geom_out_fn << " success: " << okay );
+  }
+
+  {
+    string act_out_fn = output_prefix_arg()+".activity.yml";
+    bool okay = track_filter_kpf_activity::write( act_out_fn, activity_tracks );
+    LOG_INFO( main_logger, "Wrote KPF activity to " << act_out_fn << " success: " << okay );
+  }
 }
