@@ -88,6 +88,11 @@ write_optional_packets( const std::vector< KPF::packet_t>& packets,
                         kwiver::logging_map_type& log_map,
                         KPF::record_yaml_writer& w );
 
+KPF_UTILS_EXPORT
+track_handle_list_type
+read_unstructured_yaml( const std::string& fn );
+
+
 } // ...kpf_utils
 } // ...track_oracle
 } // ...kwiver

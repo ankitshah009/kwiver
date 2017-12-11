@@ -60,14 +60,20 @@ static kwiver::vital::logger_handle_t main_logger( kwiver::vital::get_logger( __
 #include <track_oracle/core/track_field.h>
 #include <track_oracle/data_terms/data_terms.h>
 
+#include <arrows/kpf/yaml/kpf_reader.h>
+#include <arrows/kpf/yaml/kpf_yaml_parser.h>
+
 #include <kwiversys/RegularExpression.hxx>
 
+#include <iostream>
+#include <fstream>
 #include <sstream>
 
 using std::map;
 using std::vector;
 using std::string;
 using std::ostream;
+using std::ifstream;
 using std::ostringstream;
 
 namespace KPF=::kwiver::vital::kpf;
@@ -404,6 +410,45 @@ kpf_utils::write_optional_packets( const vector< KPF::packet_t>& packets,
       }
     }
   } // ...for all optional fields
+}
+
+track_handle_list_type
+kpf_utils::read_unstructured_yaml( const string& fn )
+{
+  track_handle_list_type ret;
+
+  ifstream is( fn.c_str() );
+  if ( ! is )
+  {
+    LOG_ERROR( main_logger, "Couldn't read unstructured YAML '" << fn << "'" );
+    return ret;
+  }
+
+  LOG_INFO( main_logger, "KPF unstructured YAML load start");
+  KPF::kpf_yaml_parser_t parser( is );
+  KPF::kpf_reader_t reader( parser );
+  LOG_INFO( main_logger, "KPF unstructured YAML load end");
+
+  logging_map_type wmsgs( main_logger, KWIVER_LOGGER_SITE );
+  while ( reader.next() )
+  {
+    oracle_entry_handle_type row = track_oracle_core::get_next_handle();
+    for (const auto& p : reader.get_packet_buffer())
+    {
+      add_to_row( wmsgs, row, p.second );
+    }
+    reader.flush();
+    ret.push_back( track_handle_type( row ));
+  }
+
+  if (! wmsgs.empty() )
+  {
+    LOG_INFO( main_logger, "KPF unstructured parsing warnings begin" );
+    wmsgs.dump_msgs();
+    LOG_INFO( main_logger, "KPF unstructured parsing warnings end" );
+  }
+
+  return ret;
 }
 
 } // ...track_oracle
